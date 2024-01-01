@@ -5,3 +5,10 @@
   ```
   txt2bas -i machine-code-loader.txt -o machine-code-loader.tap -A 99999
   ```
+
+- Pasmo
+
+  Example usage:
+  ```
+  pasmo --name HelloWorld --tapbas hello-world.asm hello-world.tap --log
+  ```
