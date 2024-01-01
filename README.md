@@ -10,5 +10,5 @@
 
   Example usage:
   ```
-  pasmo --name HelloWorld --tapbas hello-world.asm hello-world.tap --log
+  pasmo --name HelloWorld --tap hello-world.asm hello-world.tap
   ```
