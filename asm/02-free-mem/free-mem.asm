@@ -1,4 +1,4 @@
-                                ; compile with "pasmo --name free-mem --tap free-mem.asm free-mem.tap"
+                                ; compile with "pasmo --name free-mem --tapbas free-mem.asm free-mem.tap"
                 org  $FF58      ; address where you load the program (65368 as per machine-code-loader)
 
                 ld   hl, 0
@@ -10,4 +10,4 @@
                 ld   c, l
                 ret
 
-                end  $FF58
+                ;end  $FF58      ; determines if RAND USR added to BASIC stub

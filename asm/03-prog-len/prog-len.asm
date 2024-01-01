@@ -1,4 +1,4 @@
-                                ; compile with "pasmo --name prog-len --tap prog-len.asm prog-len.tap"
+                                ; compile with "pasmo --name prog-len --tapbas prog-len.asm prog-len.tap"
                 org  $FF58      ; address where you load the program (65368 as per machine-code-loader)
 
                 ld   hl, (23627)
@@ -10,4 +10,4 @@
 
                 ret
 
-                end  $FF58
+                ;end  $FF58      ; determines if RAND USR added to BASIC stub

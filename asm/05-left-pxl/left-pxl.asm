@@ -1,4 +1,4 @@
-                                ; compile with "pasmo --name left-pxl --tap left-pxl.asm left-pxl.tap"
+                                ; compile with "pasmo --name left-pxl --tapbas left-pxl.asm left-pxl.tap"
                 org  $FF58      ; address where you load the program (65368 as per machine-code-loader)
 
                 ld   hl, 22527
@@ -12,4 +12,4 @@ next_byte:      rl   (hl)
                 jr   nz, next_line
                 ret
 
-                end  $FF58
+                ;end  $FF58      ; determines if RAND USR added to BASIC stub

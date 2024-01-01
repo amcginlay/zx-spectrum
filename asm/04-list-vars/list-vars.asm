@@ -1,4 +1,4 @@
-                                ; compile with "pasmo --name list-vars --tap list-vars.asm list-vars.tap"
+                                ; compile with "pasmo --name list-vars --tapbas list-vars.asm list-vars.tap"
                 org  $FF58      ; address where you load the program (65368 as per machine-code-loader)
 
                 res  0, (iy + 2)
@@ -56,4 +56,4 @@ bit_5:          bit  5, a
                 ld   a, 36
                 jr   pointers
 
-                end  $FF58
+                ;end  $FF58      ; determines if RAND USR added to BASIC stub

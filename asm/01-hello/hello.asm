@@ -1,4 +1,4 @@
-                                ; compile with "pasmo --name hello --tap hello.asm hello.tap"
+                                ; compile with "pasmo --name hello --tapbas hello.asm hello.tap"
                 org  $FF58      ; address where you load the program (65368 as per machine-code-loader)
 
                 ld   hl, msg    ; HL = address of first character of messsage
@@ -12,4 +12,4 @@ exit:           ret
 
 msg:            defm 'Hello ZX Spectrum Assembly', $00 ; NULL terminated string
 
-                end  $FF58
+                ;end  $FF58      ; determines if RAND USR added to BASIC stub
