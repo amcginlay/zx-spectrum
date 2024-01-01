@@ -1,6 +1,4 @@
 # README.md
 
-Notes
-```
-[README.md](https://github.com/remy/txt2bas)https://github.com/remy/txt2bas
-```
+## Notes
+- [README.md](https://github.com/remy/txt2bas)https://github.com/remy/txt2bas
