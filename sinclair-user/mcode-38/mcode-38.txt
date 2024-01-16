@@ -1,0 +1,36 @@
+  10 CLEAR 59999
+  20 GO SUB 1000
+  30 CLS
+  40 FOR i=1 TO 704
+  50 PRINT CHR$ (25*RND+65);
+  60 NEXT i
+  70 INPUT "Attribute value = ";att
+  80 POKE start,att
+  90 RANDOMIZE USR 60002
+ 100 GO TO 70
+ 110:
+ 120:
+1000 REM HEX CODE LOAD ROUTINE
+1010 DEF FN p(x)=CODE h$(x)-48-7*(CODE h$(x)>=65)
+1020 LET byte=0
+1030 RESTORE 2000
+1040 READ start
+1050 READ h$
+1060 IF h$="*" THEN GO TO 1160
+1070 IF LEN h$<>2*INT (LEN h$/2) THEN PRINT "Odd number of hex digits in: ";h$: STOP
+1080 FOR i=1 TO LEN h$
+1090 IF NOT((h$(i)>="0" AND h$(i)<="9") OR (h$(i)>="A" AND h$(i)<="F")) THEN PRINT "Illegal hex digit: ";h$(i): STOP
+1100 NEXT i
+1110 FOR i=1 TO LEN h$ STEP 2
+1120 POKE start+byte,16*FN p(i)+FN p(i+1)
+1130 LET byte=byte+1
+1140 NEXT i
+1150 GO TO 1050
+1160 PRINT "Code entered"
+1170 PAUSE 150
+1180 RETURN
+2000 DATA 60000,"0000"
+2010 DATA "210058","010003"
+2020 DATA "ED5B60EA","73","23"
+2030 DATA "0B","78","B1"
+2040 DATA "20F9","C9","*"
