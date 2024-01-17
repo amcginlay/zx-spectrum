@@ -4,19 +4,19 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "assemble",
             "command": "pasmo.exe",
             "type": "shell",
-            "args": [
-                "-v",
-                "--tapbas",
-                "--err",
-                "--name",
-                "${fileBasenameNoExtension}",
-                "${file}",
-                "${fileDirname}\\${fileBasenameNoExtension}.tap"
-            ],
+            "args": [ "-v", "--tapbas", "--err", "--name", "${fileBasenameNoExtension}", "${file}", "${fileDirname}\\${fileBasenameNoExtension}.tap" ],
             "group": "build"
+        },
+        {
+            "label": "run",
+            "command": "C:\\Program Files (x86)\\Spectaculator\\Spectaculator.exe",
+            "type": "shell",
+            "args": [ "${fileDirname}\\${fileBasenameNoExtension}.tap" ],
+            "group": "build",
+            "dependsOn":["assemble"]
         }
     ]
 }
