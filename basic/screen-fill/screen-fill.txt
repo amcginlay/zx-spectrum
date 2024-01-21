@@ -1,0 +1,16 @@
+10 REM mutate physical screen position (x,y) into a screen RAM location as follows
+20 REM  0<=x<=31, 0<=y<=191                            <-- NOTE more Y bits than x bits 
+30 REM  0  1  0 y7 y6 y5 y4 y3 y2 y1 y0 x4 x3 x2 x1 x0 <-- 010 represents $4000, start of screen RAM
+40 REM                >> >> >> -- -- --                <-- these bits shift right by three
+50 REM                -- -- -- << << <<                <-- these bits shift left by three
+60 REM          --------------------------------------
+70 REM 15 14 13	12 11 10 09 08 07 06 05 04 03 02 01 00
+80 REM  0  1  0 y7 y6 y2 y1 y0 y5 y4 y3 x4 x3 x2 x1 x0 <-- RESULT
+
+100 REM initial pass illustrates the unusual screen layout
+110 REM http://www.breakintoprogram.co.uk/hardware/computers/zx-spectrum/screen-memory-layout
+
+200 CLS
+210 FOR i = 0 TO 6144
+220 POKE 16384 + i, 255
+230 NEXT i
