@@ -1,5 +1,5 @@
-                                ; compile with "pasmo --name hello --tapbas hello.asm hello.tap"
-                org  $FF58      ; address where you load the program (65368 as per machine-code-loader)
+ENTRYPOINT      equ  $8000      ; 32768 - user memory starts here
+                org  ENTRYPOINT 
 
                 ld   hl, msg    ; HL = address of first character of messsage
 loop:           ld   a, (hl)    ; A = first character
@@ -10,6 +10,6 @@ loop:           ld   a, (hl)    ; A = first character
                 jr   loop
 exit:           ret
 
-msg:            defm 'Hello ZX Spectrum Assembly', $00 ; NULL terminated string
+msg:            defm 'Hello ZX Spectrum Assembly!!!!', $00 ; NULL terminated string
 
-                ;end  $FF58      ; determines if RAND USR added to BASIC stub
+                end  ENTRYPOINT
