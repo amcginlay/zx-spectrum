@@ -5,7 +5,7 @@
     "tasks": [
         {
             "label": "assemble",
-            "command": "pasmo.exe",
+            "command": "C:\\pasmo\\pasmo.exe",
             "type": "shell",
             "args": [ "-v", "--tapbas", "--err", "--name", "${fileBasenameNoExtension}", "${file}", "${fileDirname}\\${fileBasenameNoExtension}.tap" ],
             "group": "build"
