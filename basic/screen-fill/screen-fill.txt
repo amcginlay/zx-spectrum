@@ -11,6 +11,9 @@
 110 REM http://www.breakintoprogram.co.uk/hardware/computers/zx-spectrum/screen-memory-layout
 
 200 CLS
-210 FOR i = 0 TO 6144
-220 POKE 16384 + i, 255
-230 NEXT i
+210 LET SCRTOP=16384
+220 LET LOCS=6144
+230 FOR i = 0 TO LOCS
+240 LET TARGET = SCRTOP + i
+250 POKE TARGET, 255
+260 NEXT i
