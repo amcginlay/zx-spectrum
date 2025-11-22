@@ -14,6 +14,7 @@
 ; -----------------------------------------------------------------------------
 
         org     $FF58                  ; Load address used by the BASIC loader stub.
+start
 
 ; System variable constants (ROM-defined)
 LAST_K  equ     $5C08                  ; Holds info about last key pressed; $FF = none.
@@ -43,4 +44,4 @@ wkey
         CALL    ROM_KEY                ; ROM translates BC → keycode in A.
         RET                            ; Return to caller.
 
-        ;end    $FF58                  ; Optional: entry marker for BASIC RAND USR
+        end    start                   ; Optional: entry marker for BASIC RAND USR
