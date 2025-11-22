@@ -11,32 +11,35 @@
 ;     Returns to the caller (e.g., BASIC via RAND USR).
 ; -----------------------------------------------------------------------------
 
-        org     $FF58                  ; Load address used by the BASIC loader stub.
-start
+ENTRYPOINT      equ  $8000             ; 32768 - user memory starts here
+                org  ENTRYPOINT 
 
 ; System variable constants (ROM-defined)
-LAST_K  equ     $5C08                  ; Holds code of last key pressed; 0 = none.
+LAST_K  equ     $5C08                  ; Holds code of last key pressed
+FLAGS   equ     $5C3B                  ; Keyboard flags, bit 5 = "new key"
 
 ; -----------------------------------------------------------------------------
 ; waitkey
 ; -----------------------------------------------------------------------------
-; Step 1: Reset LAST_K to "no key" marker (0).
-; Step 2: Wait until the ROM keyboard scanner updates it.
+; Step 1: Clear "new key" flag in FLAGS (bit 5).
+; Step 2: Wait until ROM sets bit 5 (a key has been recognised).
 ; Step 3: Read the keycode from LAST_K and return it in A.
 ; -----------------------------------------------------------------------------
 
-waitkey
-        LD      HL,LAST_K              ; Point HL to LAST_K system variable.
-        XOR     A                      ; A = 0 = "no key pressed" marker.
-        LD      (HL),A                 ; Clear previous key state.
+waitkey:
+        ; Clear bit 5 of FLAGS to say "no pending key"
+        ld      a,(FLAGS)
+        res     5,a
+        ld      (FLAGS),a
 
-; Busy-wait until LAST_K changes from 0.
-wkey
-        CP      (HL)                   ; Compare A (0) with current LAST_K.
-        JR      Z,wkey                 ; Loop while still 0 (no key).
+; Busy-wait until bit 5 of FLAGS is set by the ROM.
+wkey:
+        ld      a,(FLAGS)
+        bit     5,a              ; test bit 5 of FLAGS
+        jr      z,wkey           ; loop while no new key
 
-; A key has been pressed — retrieve keycode and return.
-        LD      A,(HL)                 ; A = keycode from LAST_K.
-        RET                            ; Return to caller.
+; A new key has been recognised — retrieve keycode and return.
+        ld      a,(LAST_K)       ; A = keycode from LAST_K
+        ret                      ; Return to caller.
 
-        end    start                   ; Optional: entry marker for BASIC RAND USR
+        end    ENTRYPOINT        ; Entry marker for BASIC RAND USR
