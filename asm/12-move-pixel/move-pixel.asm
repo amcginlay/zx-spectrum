@@ -4,48 +4,46 @@
 ; Assemble with:
 ;   pasmo --name move-pixel --tapbas move-pixel.asm move-pixel.tap
 ; Control:
-;   Spectrum cursor keys (numbers): 5 = left, 8 = right, 7 = up, 6 = down. SPACE exits.
+;   Controls: O = left, P = right, Q = up, A = down. Diagonals allowed. SPACE exits.
 ; Implementation:
 ;   No ROM calls in the main loop. Keyboard read uses matrix ports directly.
 ;   Pixel writes use direct screen memory addressing; only the targeted byte
 ;   is touched for erase/draw.
 ; -----------------------------------------------------------------------------
 
-ENTRYPOINT      equ     $8000
-SCREEN_BASE     equ     $4000
-ATTR_BASE       equ     $5800
-SCREEN_BYTES    equ     6912
-ATTR_BYTES      equ     768
-LAST_K          equ     $5C08          ; ROM system variable "last key"
-
+ENTRYPOINT      equ     $8000          ; Load address for the routine
+SCREEN_BASE     equ     $4000          ; Start of bitmap memory
+ATTR_BASE       equ     $5800          ; Start of attribute memory
+SCREEN_BYTES    equ     6912           ; Size of bitmap area
+ATTR_BYTES      equ     768            ; Size of attribute area
 BG_ATTR         equ     %01000111      ; Paper black, bright white ink for visibility
 
 INIT_X          equ     128            ; Starting pixel X (0-255)
 INIT_Y          equ     96             ; Starting pixel Y (0-191)
 
-                org     ENTRYPOINT
+                org     ENTRYPOINT      ; Set assembly origin
 
 start:
-                ei
-                call    clear_screen
-                call    clear_attrs
+                ei                      ; Enable interrupts for HALT timing
+                call    clear_screen    ; Blank bitmap
+                call    clear_attrs     ; Paint attributes to known colors
 
-                ld      a,INIT_X
-                ld      (pixel_x),a
-                ld      a,INIT_Y
-                ld      (pixel_y),a
-                call    place_pixel
+                ld      a,INIT_X        ; A = initial X
+                ld      (pixel_x),a     ; Store current X
+                ld      a,INIT_Y        ; A = initial Y
+                ld      (pixel_y),a     ; Store current Y
+                call    place_pixel     ; Draw initial pixel
 
 main_loop:
-                halt                    ; 50 Hz pacing
-                call    read_inputs     ; A = dir mask, bit7 = exit
-                bit     7,a
-                jr      nz,exit_game
-                call    update_position ; Uses mask in A
-                jr      main_loop
+                halt                    ; Wait one frame (50 Hz)
+                call    read_inputs     ; Get direction mask in A
+                bit     7,a             ; Test exit flag (SPACE)
+                jr      nz,exit_game    ; Quit if set
+                call    update_position ; Move/draw according to mask
+                jr      main_loop       ; Loop forever
 
 exit_game:
-                ret
+                ret                     ; Return to BASIC
 
 ; -----------------------------------------------------------------------------
 ; update_position
@@ -53,121 +51,121 @@ exit_game:
 ; Moves one pixel per frame; supports diagonal input.
 ; -----------------------------------------------------------------------------
 update_position:
-                ld      b,a
+                ld      b,a             ; Save direction mask in B
 
-                ld      a,(pixel_x)
-                ld      h,a             ; original X
-                ld      c,a             ; working X
-                ld      a,(pixel_y)
-                ld      l,a             ; original Y
-                ld      d,a             ; working Y
+                ld      a,(pixel_x)     ; Fetch current X
+                ld      h,a             ; H = old X (for erase)
+                ld      c,a             ; C = new X working copy
+                ld      a,(pixel_y)     ; Fetch current Y
+                ld      l,a             ; L = old Y (for erase)
+                ld      d,a             ; D = new Y working copy
 
-                ; Horizontal
-                ld      e,0
-                bit     1,b             ; right
-                jr      z,no_right
-                inc     e
+                ; Horizontal delta accumulation
+                ld      e,0             ; E = horizontal delta
+                bit     1,b             ; Right pressed?
+                jr      z,no_right      ; Skip if not
+                inc     e               ; E = +1
 no_right:
-                bit     0,b             ; left
-                jr      z,no_left
-                dec     e
+                bit     0,b             ; Left pressed?
+                jr      z,no_left       ; Skip if not
+                dec     e               ; E = -1 (or 0 if both pressed)
 no_left:
-                ld      a,e
-                cp      1
-                jr      nz,maybe_left_move
-                ld      a,c
-                cp      255
-                jr      z,skip_h_move
-                inc     c
+                ld      a,e             ; A = horizontal delta
+                cp      1               ; Is delta +1?
+                jr      nz,maybe_left_move ; If not, maybe -1 or 0
+                ld      a,c             ; A = current X
+                cp      255             ; At right edge?
+                jr      z,skip_h_move   ; If at edge, skip move
+                inc     c               ; Otherwise X++
                 jr      h_move_done
 maybe_left_move:
-                cp      $FF             ; -1
-                jr      nz,skip_h_move
-                ld      a,c
-                or      a
-                jr      z,skip_h_move
-                dec     c
+                cp      $FF             ; Delta -1?
+                jr      nz,skip_h_move  ; If 0, skip
+                ld      a,c             ; A = current X
+                or      a               ; At left edge?
+                jr      z,skip_h_move   ; If at 0, skip
+                dec     c               ; Otherwise X--
 h_move_done:
 skip_h_move:
 
-                ; Vertical
-                ld      e,0
-                bit     3,b             ; down
-                jr      z,no_down
-                inc     e
+                ; Vertical delta accumulation
+                ld      e,0             ; E = vertical delta
+                bit     3,b             ; Down pressed?
+                jr      z,no_down       ; Skip if not
+                inc     e               ; E = +1
 no_down:
-                bit     2,b             ; up
-                jr      z,no_up
-                dec     e
+                bit     2,b             ; Up pressed?
+                jr      z,no_up         ; Skip if not
+                dec     e               ; E = -1 (or 0)
 no_up:
-                ld      a,e
-                cp      1
-                jr      nz,maybe_up_move
-                ld      a,d
-                cp      191
-                jr      z,skip_v_move
-                inc     d
+                ld      a,e             ; A = vertical delta
+                cp      1               ; Is delta +1?
+                jr      nz,maybe_up_move ; If not, maybe -1 or 0
+                ld      a,d             ; A = current Y
+                cp      191             ; At bottom edge?
+                jr      z,skip_v_move   ; Skip if at limit
+                inc     d               ; Otherwise Y++
                 jr      v_move_done
 maybe_up_move:
-                cp      $FF             ; -1
-                jr      nz,skip_v_move
-                ld      a,d
-                or      a
-                jr      z,skip_v_move
-                dec     d
+                cp      $FF             ; Delta -1?
+                jr      nz,skip_v_move  ; If 0, skip
+                ld      a,d             ; A = current Y
+                or      a               ; At top edge?
+                jr      z,skip_v_move   ; Skip if at 0
+                dec     d               ; Otherwise Y--
 v_move_done:
 skip_v_move:
 
-                ; Any change?
-                ld      a,c
+                ; Any change from old H/L?
+                ld      a,c             ; Compare new X to old X
                 cp      h
-                jr      nz,do_move
-                ld      a,d
+                jr      nz,do_move      ; If different, move
+                ld      a,d             ; Compare new Y to old Y
                 cp      l
-                ret     z               ; No move
+                ret     z               ; If both same, nothing to do
 
 do_move:
                 ; Erase old pixel using original X/Y in H/L
-                push    bc              ; preserve new X in C
-                push    de              ; preserve new Y in D
+                push    bc              ; Preserve new X (C) and mask (B)
+                push    de              ; Preserve new Y (D)
                 ld      b,h             ; B = old X
                 ld      c,l             ; C = old Y
-                call    erase_at_bc
-                pop     de
-                pop     bc
+                call    erase_at_bc     ; Clear old pixel
+                pop     de              ; Restore new Y
+                pop     bc              ; Restore new X/mask
 
-                ld      a,c
-                ld      (pixel_x),a
-                ld      a,d
-                ld      (pixel_y),a
-                call    place_pixel
-                ret
+                ld      a,c             ; A = new X
+                ld      (pixel_x),a     ; Store new X
+                ld      a,d             ; A = new Y
+                ld      (pixel_y),a     ; Store new Y
+                call    place_pixel     ; Draw at new coords
+                ret                     ; Done for this frame
 
 ; -----------------------------------------------------------------------------
 ; place_pixel: compute address/mask, store them, and set the pixel on.
 ; -----------------------------------------------------------------------------
 place_pixel:
-                call    calc_pixel_ptr  ; HL = addr, A = bit mask
-                ld      c,a
-                ld      a,(hl)
-                or      c
-                ld      (hl),a
-                ret
+                call    calc_pixel_ptr  ; HL = addr, A = bit mask for current X/Y
+                ld      c,a             ; C = mask
+                ld      a,(hl)          ; A = current byte
+                or      c               ; Set the pixel bit
+                ld      (hl),a          ; Store updated byte
+                ret                     ; Return
 
 ; -----------------------------------------------------------------------------
 ; erase_at_bc: erase pixel at X in B, Y in C
 ; -----------------------------------------------------------------------------
 erase_at_bc:
-                push    bc              ; save caller BC
+                push    bc              ; Save caller BC
                 call    calc_pixel_ptr_bc ; HL, A = mask for B,C
-                ld      c,a
-                cpl
+                ld      c,a             ; C = mask
+                cpl                     ; Invert mask bits
                 ld      b,a             ; B = inverted mask
-                ld      a,(hl)
-                and     b
-                ld      (hl),a
-                pop     bc
-                ret
+                ld      a,(hl)          ; Read current byte
+                and     b               ; Clear the pixel bit
+                ld      (hl),a          ; Store updated byte
+                pop     bc              ; Restore caller BC
+                ret                     ; Return
 
 ; -----------------------------------------------------------------------------
 ; calc_pixel_ptr
@@ -188,32 +186,32 @@ calc_pixel_ptr:
 ; -----------------------------------------------------------------------------
 calc_pixel_ptr_bc:
                 ld      a,b              ; A = X
-                and     7
-                ld      e,a
-                ld      d,0
-                ld      hl,mask_table
-                add     hl,de
-                ld      a,(hl)           ; A = mask
+                and     7                ; A = X mod 8
+                ld      e,a              ; E = index into mask table
+                ld      d,0              ; D = 0 for 16-bit add
+                ld      hl,mask_table    ; HL = table start
+                add     hl,de            ; HL = table + (X mod 8)
+                ld      a,(hl)           ; A = bit mask for this pixel within byte
                 ld      (pixel_mask),a   ; stash mask safely
 
                 ld      a,c              ; A = Y
-                and     7
-                ld      h,a
-                ld      l,0              ; HL = (y&7)<<8
+                and     7                ; Low 3 bits: line within 8-row block
+                ld      h,a              ; H = (y&7)
+                ld      l,0              ; HL = (y&7)<<8 (row offset)
 
-                ld      a,c
-                and     $38
-                add     a,a
+                ld      a,c              ; A = Y again
+                and     $38              ; Middle 3 bits: character row within band
+                add     a,a              ; *2
                 add     a,a              ; *4
                 ld      d,0
-                ld      e,a
-                add     hl,de
+                ld      e,a              ; DE = (y&0x38)*4
+                add     hl,de            ; Add to line offset
 
-                ld      a,c
-                and     $C0              ; top two bits
+                ld      a,c              ; A = Y again
+                and     $C0              ; Top 2 bits: band (0,64,128)
                 ld      d,0
-                ld      e,a
-                rl      e
+                ld      e,a              ; DE = band*64
+                rl      e                ; shift left 5 times = *32
                 rl      d
                 rl      e
                 rl      d
@@ -222,62 +220,65 @@ calc_pixel_ptr_bc:
                 rl      e
                 rl      d
                 rl      e
-                rl      d                ; <<5 -> *32
-                add     hl,de
+                rl      d
+                add     hl,de            ; Add band offset
 
-                ld      a,b
-                srl     a
-                srl     a
-                srl     a                ; x >> 3
+                ld      a,b              ; A = X again
+                srl     a                ; X >> 1
+                srl     a                ; X >> 2
+                srl     a                ; X >> 3
                 ld      d,0
-                ld      e,a
-                add     hl,de
+                ld      e,a              ; DE = byte offset for columns
+                add     hl,de            ; Add column offset
 
-                ld      de,SCREEN_BASE
-                add     hl,de
+                ld      de,SCREEN_BASE   ; DE = bitmap base
+                add     hl,de            ; HL = final pixel byte address
 
-                ld      a,(pixel_mask)   ; restore mask to A
-                ret
+                ld      a,(pixel_mask)   ; Restore mask to A for caller
+                ret                      ; Return with HL/A set
 
 ; -----------------------------------------------------------------------------
 ; read_inputs: returns mask in A
-; bit0 left (5), bit1 right (8), bit2 up (7), bit3 down (6), bit7 exit (SPACE)
+; bit0 left (O), bit1 right (P), bit2 up (Q), bit3 down (A), bit7 exit (SPACE)
 ; -----------------------------------------------------------------------------
 read_inputs:
-                xor     a                ; mask result in A
+                xor     a                ; Clear mask result in A
 
-                ; LEFT = '5' on row 1-5 (A12 low -> $F7FE), bit4 = 5
-                ld      bc,$F7FE
-                in      l,(c)
-                bit     4,l
-                jr      nz,skip_left
+                ; Row P,O,I,U,Y (A13 low -> $DFFE)
+                ld      bc,$DFFE        ; Select keyboard row
+                in      l,(c)           ; Read columns into L
+                bit     1,l              ; O = left
+                jr      nz,no_o
                 set     0,a
-skip_left:
-
-                ; 6/7/8 on row 6-0 (A11 low -> $EFFE):
-                ; bit4=6 (down), bit3=7 (up), bit2=8 (right)
-                ld      bc,$EFFE
-                in      l,(c)
-                bit     3,l              ; 7 = up
-                jr      nz,skip_up
-                set     2,a
-skip_up:
-                bit     4,l              ; 6 = down
-                jr      nz,skip_down
-                set     3,a
-skip_down:
-                bit     2,l              ; 8 = right
-                jr      nz,skip_right
+no_o:
+                bit     0,l              ; P = right
+                jr      nz,no_p
                 set     1,a
-skip_right:
+no_p:
 
-                ; SPACE to exit (row SPACE,SYM,M,N,B -> $7FFE, bit0 = SPACE)
-                ld      bc,$7FFE
-                in      l,(c)
-                bit     0,l
-                jr      nz,skip_space
+                ; Row Q,W,E,R,T (A10 low -> $FBFE)
+                ld      bc,$FBFE        ; Select row
+                in      l,(c)           ; Read columns
+                bit     0,l              ; Q = up
+                jr      nz,no_q
+                set     2,a
+no_q:
+
+                ; Row A,S,D,F,G (A9 low -> $FDFE)
+                ld      bc,$FDFE        ; Select row
+                in      l,(c)           ; Read columns
+                bit     0,l              ; A = down
+                jr      nz,no_a
+                set     3,a
+no_a:
+
+                ; Row SPACE,SYM,M,N,B (A15 low -> $7FFE)
+                ld      bc,$7FFE        ; Select row
+                in      l,(c)           ; Read columns
+                bit     0,l              ; SPACE to exit
+                jr      nz,no_space
                 set     7,a
-skip_space:
+no_space:
 
                 ret
 
@@ -285,37 +286,37 @@ skip_space:
 ; clear_screen: zero pixel memory
 ; -----------------------------------------------------------------------------
 clear_screen:
-                ld      hl,SCREEN_BASE
-                ld      de,SCREEN_BASE+1
-                ld      bc,SCREEN_BYTES-1
-                xor     a
-                ld      (hl),a
-                ldir
-                ret
+                ld      hl,SCREEN_BASE  ; HL = start of screen
+                ld      de,SCREEN_BASE+1 ; DE = HL+1 for LDIR
+                ld      bc,SCREEN_BYTES-1 ; BC = byte count for LDIR
+                xor     a               ; A = 0
+                ld      (hl),a          ; Zero first byte
+                ldir                    ; Fill the rest with zero
+                ret                     ; Return
 
 ; -----------------------------------------------------------------------------
 ; clear_attrs: fill attribute area with background colour
 ; -----------------------------------------------------------------------------
 clear_attrs:
-                ld      hl,ATTR_BASE
-                ld      de,ATTR_BASE+1
-                ld      bc,ATTR_BYTES-1
-                ld      a,BG_ATTR
-                ld      (hl),a
-                ldir
-                ret
+                ld      hl,ATTR_BASE    ; HL = start of attributes
+                ld      de,ATTR_BASE+1  ; DE = HL+1 for LDIR
+                ld      bc,ATTR_BYTES-1 ; BC = byte count
+                ld      a,BG_ATTR       ; A = default attribute
+                ld      (hl),a          ; Write first attribute
+                ldir                    ; Fill remaining attributes
+                ret                     ; Return
 
 ; -----------------------------------------------------------------------------
 ; Data
 ; -----------------------------------------------------------------------------
 
-pixel_x:        defb    0
-pixel_y:        defb    0
-pixel_ptr:      defw    0
-pixel_mask:     defb    0
+pixel_x:        defb    0               ; Current X position
+pixel_y:        defb    0               ; Current Y position
+pixel_ptr:      defw    0               ; (Unused now) kept for compatibility
+pixel_mask:     defb    0               ; Temporary mask storage
 
-mask_table:                             ; Bit masks for X mod 8
+mask_table:                             ; Bit masks for X mod 8 (bit 7..0)
                 defb    %10000000,%01000000,%00100000,%00010000
                 defb    %00001000,%00000100,%00000010,%00000001
 
-                end     ENTRYPOINT
+                end     ENTRYPOINT      ; Mark end and entry address
