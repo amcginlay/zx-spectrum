@@ -5,10 +5,9 @@
 ;     pasmo --name scratch --tapbas scratch.asm scratch.tap
 ;
 ; Purpose:
-;     Waits until a key is pressed on the ZX Spectrum keyboard,
-;     then returns the key code from the system variable LAST_K.
-;
-;     Returns to the caller (e.g., BASIC via RAND USR).
+;     Wait for keyboard input, only accept the game keys O, P, Q, A
+;     (any case), print them sequentially, and keep looping until
+;     SPACE is pressed to return to BASIC.
 ; -----------------------------------------------------------------------------
 
 ENTRYPOINT      equ     $8000          ; 32768 - user memory starts here
